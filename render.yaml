@@ -1,0 +1,56 @@
+services:
+  # Main Web Service
+  - type: web
+    name: energy-management-api
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    plan: starter # Can upgrade to standard/pro later
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: energy-management-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: energy-management-redis
+          property: connectionString
+    healthCheckPath: /health
+
+  # Redis Service
+  - type: redis
+    name: energy-management-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+
+  # PostgreSQL Database (more reliable than MySQL on Render)
+  - type: pgsql
+    name: energy-management-db
+    plan: starter
+    databaseName: energy_management
+    user: energy_admin
+# Optional: Background Worker (if you want to separate background jobs)
+#  - type: worker
+#    name: energy-background-worker
+#    env: node
+#    buildCommand: npm install && npm run build
+#    startCommand: npm run worker
+#    envVars:
+#      - key: NODE_ENV
+#        value: production
+#      - key: DATABASE_URL
+#        fromDatabase:
+#          name: energy-management-db
+#          property: connectionString
+#      - key: REDIS_URL
+#        fromService:
+#          type: redis
+#          name: energy-management-redis
+#          property: connectionString

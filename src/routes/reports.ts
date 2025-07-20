@@ -1,4 +1,4 @@
-// reports.ts
+// reports.ts - Updated with Enhanced Energy Audit Report
 import { Router } from "express";
 import reportController from "@/controllers/reportController";
 import { authenticateToken, authorizeRoles } from "@/middleware/auth";
@@ -17,52 +17,52 @@ import {
   generateMonitoringReportValidation,
 } from "@/validations/reportValidation";
 import { idParamsValidation } from "@/validations/commonValidations";
+import { debugRoute } from "@/utils/debugLogger";
 
 const router = Router();
 
 router.use(authenticateToken);
 
-// Routes
-
-// Get all reports with filtering and pagination
+// Routes with debug logging
 router.get(
   "/",
+  debugRoute("REPORTS", "GET_REPORTS"),
   validateQuery(reportsQueryValidation),
   reportController.getReports
 );
 
-// Get report statistics
 router.get(
   "/stats",
+  debugRoute("REPORTS", "GET_REPORT_STATS"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   reportController.getReportStats
 );
 
-// Get specific report by ID
 router.get(
   "/:id",
+  debugRoute("REPORTS", "GET_REPORT_BY_ID"),
   validateParams(idParamsValidation),
   reportController.getReportById
 );
 
-// Download report file
 router.get(
   "/:id/download",
+  debugRoute("REPORTS", "DOWNLOAD_REPORT"),
   validateParams(idParamsValidation),
   reportController.downloadReport
 );
 
-// Regenerate existing report
 router.post(
   "/:id/regenerate",
+  debugRoute("REPORTS", "REGENERATE_REPORT"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateParams(idParamsValidation),
   reportController.regenerateReport
 );
 
-// Generate energy consumption report
 router.post(
   "/energy",
+  debugRoute("REPORTS", "GENERATE_ENERGY_REPORT"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -72,9 +72,9 @@ router.post(
   reportController.generateEnergyReport
 );
 
-// Generate power quality report
 router.post(
   "/power-quality",
+  debugRoute("REPORTS", "GENERATE_POWER_QUALITY_REPORT"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -84,21 +84,22 @@ router.post(
   reportController.generatePowerQualityReport
 );
 
-// Generate audit summary report
+// UPDATED: Enhanced Energy Audit Report - Now generates comprehensive professional reports
 router.post(
   "/audit",
+  debugRoute("REPORTS", "GENERATE_COMPREHENSIVE_ENERGY_AUDIT_REPORT"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
     UserRole.FACILITY_ENGINEER
   ),
   validateBody(generateAuditReportValidation),
-  reportController.generateAuditReport
+  reportController.generateAuditReport // This now generates comprehensive energy audit reports
 );
 
-// Generate compliance report
 router.post(
   "/compliance",
+  debugRoute("REPORTS", "GENERATE_COMPLIANCE_REPORT"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -108,9 +109,9 @@ router.post(
   reportController.generateComplianceReport
 );
 
-// Generate monitoring report
 router.post(
   "/monitoring",
+  debugRoute("REPORTS", "GENERATE_MONITORING_REPORT"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -120,9 +121,9 @@ router.post(
   reportController.generateMonitoringReport
 );
 
-// Delete report
 router.delete(
   "/:id",
+  debugRoute("REPORTS", "DELETE_REPORT"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateParams(idParamsValidation),
   reportController.deleteReport

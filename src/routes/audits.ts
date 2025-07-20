@@ -15,42 +15,46 @@ import {
   auditParamsValidation,
 } from "@/validations/auditValidation";
 import { dateRangeValidation } from "@/validations/commonValidations";
+import { debugRoute } from "@/utils/debugLogger";
 
 const router = Router();
 
 router.use(authenticateToken);
 
-// Routes
+// Routes with debug logging
+router.get(
+  "/",
+  debugRoute("AUDITS", "GET_AUDITS"),
+  validateQuery(auditQueryValidation),
+  auditController.getAudits
+);
 
-// Get all audits with filtering and pagination
-router.get("/", validateQuery(auditQueryValidation), auditController.getAudits);
-
-// Get audit summary statistics
 router.get(
   "/summary",
+  debugRoute("AUDITS", "GET_AUDIT_SUMMARY"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateQuery(dateRangeValidation),
   auditController.getAuditSummary
 );
 
-// Get specific audit by ID
 router.get(
   "/:id",
+  debugRoute("AUDITS", "GET_AUDIT_BY_ID"),
   validateParams(auditParamsValidation),
   auditController.getAuditById
 );
 
-// Create new audit
 router.post(
   "/",
+  debugRoute("AUDITS", "CREATE_AUDIT"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateBody(createAuditValidation),
   auditController.createAudit
 );
 
-// Update existing audit
 router.put(
   "/:id",
+  debugRoute("AUDITS", "UPDATE_AUDIT"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -61,9 +65,9 @@ router.put(
   auditController.updateAudit
 );
 
-// Delete audit
 router.delete(
   "/:id",
+  debugRoute("AUDITS", "DELETE_AUDIT"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateParams(auditParamsValidation),
   auditController.deleteAudit

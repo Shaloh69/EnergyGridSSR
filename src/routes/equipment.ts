@@ -19,55 +19,53 @@ import {
   maintenanceLogValidation,
   performanceQueryValidation,
 } from "@/validations/equipmentValidation";
+import { debugRoute } from "@/utils/debugLogger";
 
 const router = Router();
 
 router.use(authenticateToken);
 
-// Routes
-
-// Get all equipment with filtering and pagination
+// Routes with debug logging
 router.get(
   "/",
+  debugRoute("EQUIPMENT", "GET_EQUIPMENT"),
   validateQuery(equipmentQueryValidation),
   equipmentController.getEquipment
 );
 
-// Get equipment by ID
 router.get(
   "/:id",
+  debugRoute("EQUIPMENT", "GET_EQUIPMENT_BY_ID"),
   validateParams(equipmentParamsValidation),
   equipmentController.getEquipmentById
 );
 
-// Get equipment by QR code
 router.get(
   "/qr/:qrCode",
+  debugRoute("EQUIPMENT", "GET_EQUIPMENT_BY_QR"),
   validateParams(qrCodeParamsValidation),
   equipmentController.getEquipmentByQR
 );
 
-// Get maintenance schedule (optionally filtered by building)
 router.get(
   "/maintenance/schedule/:buildingId?",
+  debugRoute("EQUIPMENT", "GET_MAINTENANCE_SCHEDULE"),
   validateParams(buildingIdOptionalParamsValidation),
   validateQuery(maintenanceQueryValidation),
   equipmentController.getMaintenanceSchedule
 );
 
-// NEW ROUTES - Add these missing endpoints
-
-// Get equipment maintenance history
 router.get(
   "/:id/maintenance",
+  debugRoute("EQUIPMENT", "GET_MAINTENANCE_HISTORY"),
   validateParams(equipmentParamsValidation),
   validateQuery(maintenanceQueryValidation),
   equipmentController.getMaintenanceHistory
 );
 
-// Log equipment maintenance
 router.post(
   "/:id/maintenance",
+  debugRoute("EQUIPMENT", "LOG_MAINTENANCE"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -79,17 +77,17 @@ router.post(
   equipmentController.logMaintenance
 );
 
-// Get equipment performance analytics
 router.get(
   "/:id/performance",
+  debugRoute("EQUIPMENT", "GET_PERFORMANCE_ANALYTICS"),
   validateParams(equipmentParamsValidation),
   validateQuery(performanceQueryValidation),
   equipmentController.getPerformanceAnalytics
 );
 
-// Create new equipment
 router.post(
   "/",
+  debugRoute("EQUIPMENT", "CREATE_EQUIPMENT"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -99,9 +97,9 @@ router.post(
   equipmentController.createEquipment
 );
 
-// Update equipment
 router.put(
   "/:id",
+  debugRoute("EQUIPMENT", "UPDATE_EQUIPMENT"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -112,9 +110,9 @@ router.put(
   equipmentController.updateEquipment
 );
 
-// Delete equipment
 router.delete(
   "/:id",
+  debugRoute("EQUIPMENT", "DELETE_EQUIPMENT"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateParams(equipmentParamsValidation),
   equipmentController.deleteEquipment

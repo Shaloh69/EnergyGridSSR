@@ -20,45 +20,45 @@ import {
   buildingIdParamsValidation,
   idParamsValidation,
 } from "@/validations/commonValidations";
+import { debugRoute } from "@/utils/debugLogger";
 
 const router = Router();
 
 router.use(authenticateToken);
 
-// Routes
-
-// Get all compliance checks (paginated)
+// Routes with debug logging
 router.get(
   "/",
+  debugRoute("COMPLIANCE", "GET_ALL_COMPLIANCE_CHECKS"),
   validateQuery(complianceQueryValidation),
   complianceController.getAllComplianceChecks
 );
 
-// Get compliance checks for specific audit
 router.get(
   "/audit/:auditId",
+  debugRoute("COMPLIANCE", "GET_COMPLIANCE_CHECKS_BY_AUDIT"),
   validateParams(auditIdParamsValidation),
   complianceController.getComplianceChecksByAudit
 );
 
-// Get compliance report for audit
 router.get(
   "/report/:auditId",
+  debugRoute("COMPLIANCE", "GET_COMPLIANCE_REPORT"),
   validateParams(auditIdParamsValidation),
   complianceController.getComplianceReport
 );
 
-// Get compliance trends for building
 router.get(
   "/trends/:buildingId",
+  debugRoute("COMPLIANCE", "GET_COMPLIANCE_TRENDS"),
   validateParams(buildingIdParamsValidation),
   validateQuery(complianceTrendsQueryValidation),
   complianceController.getComplianceTrends
 );
 
-// Perform compliance check
 router.post(
   "/check",
+  debugRoute("COMPLIANCE", "PERFORM_COMPLIANCE_CHECK"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -68,9 +68,9 @@ router.post(
   complianceController.performComplianceCheck
 );
 
-// Create new compliance check
 router.post(
   "/",
+  debugRoute("COMPLIANCE", "CREATE_COMPLIANCE_CHECK"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -80,9 +80,9 @@ router.post(
   complianceController.createComplianceCheck
 );
 
-// Update compliance check
 router.put(
   "/:id",
+  debugRoute("COMPLIANCE", "UPDATE_COMPLIANCE_CHECK"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -93,9 +93,9 @@ router.put(
   complianceController.updateComplianceCheck
 );
 
-// Delete compliance check
 router.delete(
   "/:id",
+  debugRoute("COMPLIANCE", "DELETE_COMPLIANCE_CHECK"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateParams(idParamsValidation),
   complianceController.deleteComplianceCheck

@@ -19,46 +19,46 @@ import {
   idParamsValidation,
   buildingIdParamsValidation,
 } from "@/validations/commonValidations";
+import { debugRoute } from "@/utils/debugLogger";
 
 const router = Router();
 
 router.use(authenticateToken);
 
-// Routes
-
-// Get energy consumption data with filtering and pagination
+// Routes with debug logging
 router.get(
   "/",
+  debugRoute("ENERGY", "GET_ENERGY_CONSUMPTION"),
   validateQuery(energyQueryValidation),
   energyController.getEnergyConsumption
 );
 
-// Get energy statistics for a building
 router.get(
   "/stats/:buildingId",
+  debugRoute("ENERGY", "GET_ENERGY_STATS"),
   validateParams(buildingIdParamsValidation),
   validateQuery(dateRangeValidation),
   energyController.getEnergyStats
 );
 
-// Get energy trends for a building
 router.get(
   "/trends/:buildingId",
+  debugRoute("ENERGY", "GET_ENERGY_TRENDS"),
   validateParams(buildingIdParamsValidation),
   validateQuery(energyTrendsQueryValidation),
   energyController.getEnergyTrends
 );
 
-// Get building comparison data
 router.get(
   "/comparison",
+  debugRoute("ENERGY", "GET_BUILDING_COMPARISON"),
   validateQuery(dateRangeValidation),
   energyController.getBuildingComparison
 );
 
-// Create new energy reading
 router.post(
   "/",
+  debugRoute("ENERGY", "CREATE_ENERGY_READING"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -68,9 +68,9 @@ router.post(
   energyController.createEnergyReading
 );
 
-// Update energy reading
 router.put(
   "/:id",
+  debugRoute("ENERGY", "UPDATE_ENERGY_READING"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -81,9 +81,9 @@ router.put(
   energyController.updateEnergyReading
 );
 
-// Delete energy reading
 router.delete(
   "/:id",
+  debugRoute("ENERGY", "DELETE_ENERGY_READING"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateParams(idParamsValidation),
   energyController.deleteEnergyReading

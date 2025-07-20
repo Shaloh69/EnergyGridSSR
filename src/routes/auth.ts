@@ -10,45 +10,57 @@ import {
   updateProfileValidation,
   changePasswordValidation,
 } from "@/validations/authValidation";
+import { debugRoute } from "@/utils/debugLogger";
 
 const router = Router();
 
-// Routes
-
-// Register new user
+// Routes with debug logging
 router.post(
   "/register",
+  debugRoute("AUTH", "REGISTER_USER"),
   validateBody(registerValidation),
   authController.register
 );
 
-// Login user
-router.post("/login", validateBody(loginValidation), authController.login);
+router.post(
+  "/login",
+  debugRoute("AUTH", "LOGIN_USER"),
+  validateBody(loginValidation),
+  authController.login
+);
 
-// Refresh access token
 router.post(
   "/refresh",
+  debugRoute("AUTH", "REFRESH_TOKEN"),
   validateBody(refreshTokenValidation),
   authController.refreshToken
 );
 
-// Logout user (requires authentication)
-router.post("/logout", authenticateToken, authController.logout);
+router.post(
+  "/logout",
+  debugRoute("AUTH", "LOGOUT_USER"),
+  authenticateToken,
+  authController.logout
+);
 
-// Get user profile (requires authentication)
-router.get("/profile", authenticateToken, authController.getProfile);
+router.get(
+  "/profile",
+  debugRoute("AUTH", "GET_PROFILE"),
+  authenticateToken,
+  authController.getProfile
+);
 
-// Update user profile (requires authentication)
 router.put(
   "/profile",
+  debugRoute("AUTH", "UPDATE_PROFILE"),
   authenticateToken,
   validateBody(updateProfileValidation),
   authController.updateProfile
 );
 
-// Change password (requires authentication)
 router.put(
   "/change-password",
+  debugRoute("AUTH", "CHANGE_PASSWORD"),
   authenticateToken,
   validateBody(changePasswordValidation),
   authController.changePassword

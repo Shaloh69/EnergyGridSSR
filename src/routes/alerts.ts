@@ -22,16 +22,23 @@ import {
   idParamsValidation,
   buildingIdParamsValidation,
 } from "@/validations/commonValidations";
+import { debugRoute } from "@/utils/debugLogger";
 
 const router = Router();
 
 router.use(authenticateToken);
 
-// Routes
-router.get("/", validateQuery(alertQueryValidation), alertController.getAlerts);
+// Routes with debug logging
+router.get(
+  "/",
+  debugRoute("ALERTS", "GET_ALERTS"),
+  validateQuery(alertQueryValidation),
+  alertController.getAlerts
+);
 
 router.get(
   "/statistics",
+  debugRoute("ALERTS", "GET_ALERT_STATISTICS"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateQuery(alertStatisticsQueryValidation),
   alertController.getAlertStatistics
@@ -39,12 +46,14 @@ router.get(
 
 router.get(
   "/:id",
+  debugRoute("ALERTS", "GET_ALERT_BY_ID"),
   validateParams(idParamsValidation),
   alertController.getAlertById
 );
 
 router.post(
   "/",
+  debugRoute("ALERTS", "CREATE_ALERT"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -56,6 +65,7 @@ router.post(
 
 router.put(
   "/:id",
+  debugRoute("ALERTS", "UPDATE_ALERT"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -68,12 +78,14 @@ router.put(
 
 router.post(
   "/:id/acknowledge",
+  debugRoute("ALERTS", "ACKNOWLEDGE_ALERT"),
   validateParams(idParamsValidation),
   alertController.acknowledgeAlert
 );
 
 router.post(
   "/:id/resolve",
+  debugRoute("ALERTS", "RESOLVE_ALERT"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -84,9 +96,9 @@ router.post(
   alertController.resolveAlert
 );
 
-// Alert Thresholds Routes
 router.get(
   "/thresholds",
+  debugRoute("ALERTS", "GET_THRESHOLDS"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateQuery(thresholdQueryValidation),
   alertController.getThresholds
@@ -94,14 +106,15 @@ router.get(
 
 router.post(
   "/thresholds",
+  debugRoute("ALERTS", "CREATE_THRESHOLD"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateBody(createThresholdValidation),
   alertController.createThreshold
 );
 
-// Monitoring & Testing Routes
 router.post(
   "/test-monitoring/:buildingId",
+  debugRoute("ALERTS", "TEST_MONITORING"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateParams(buildingIdParamsValidation),
   validateBody(testMonitoringValidation),
@@ -110,6 +123,7 @@ router.post(
 
 router.post(
   "/process-escalations",
+  debugRoute("ALERTS", "PROCESS_ESCALATIONS"),
   authorizeRoles(UserRole.ADMIN),
   alertController.processEscalations
 );

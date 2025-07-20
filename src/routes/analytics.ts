@@ -22,16 +22,16 @@ import {
   buildingIdParamsValidation,
   auditIdParamsValidation,
 } from "@/validations/commonValidations";
+import { debugRoute } from "@/utils/debugLogger";
 
 const router = Router();
 
 router.use(authenticateToken);
 
-// Routes
-
-// Run comprehensive analytics analysis
+// Routes with debug logging
 router.get(
   "/analysis",
+  debugRoute("ANALYTICS", "RUN_ANALYSIS"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -41,9 +41,9 @@ router.get(
   analyticsController.runAnalysis
 );
 
-// Get analytics dashboard data - Portfolio view (no validation needed)
 router.get(
   "/dashboard",
+  debugRoute("ANALYTICS", "GET_DASHBOARD"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -52,18 +52,18 @@ router.get(
   analyticsController.getDashboard
 );
 
-// Calculate energy baseline for a building
 router.post(
   "/baseline/:buildingId",
+  debugRoute("ANALYTICS", "CALCULATE_BASELINE"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateParams(buildingIdParamsValidation),
   validateQuery(baselineQueryValidation),
   analyticsController.calculateBaseline
 );
 
-// Analyze power quality for specific reading
 router.post(
   "/power-quality/:buildingId/:pqReadingId",
+  debugRoute("ANALYTICS", "ANALYZE_POWER_QUALITY"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -74,9 +74,9 @@ router.post(
   analyticsController.analyzePowerQuality
 );
 
-// Get maintenance predictions for equipment
 router.get(
   "/maintenance/:equipmentId",
+  debugRoute("ANALYTICS", "GET_MAINTENANCE_PREDICTIONS"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -86,18 +86,18 @@ router.get(
   analyticsController.getMaintenancePredictions
 );
 
-// Generate energy consumption forecast
 router.get(
   "/forecast/:buildingId",
+  debugRoute("ANALYTICS", "GENERATE_FORECAST"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateParams(buildingIdParamsValidation),
   validateQuery(forecastQueryValidation),
   analyticsController.generateForecast
 );
 
-// Detect anomalies
 router.post(
   "/anomalies",
+  debugRoute("ANALYTICS", "DETECT_ANOMALIES"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -107,25 +107,25 @@ router.post(
   analyticsController.detectAnomalies
 );
 
-// Run compliance analysis for audit
 router.post(
   "/compliance/:auditId",
+  debugRoute("ANALYTICS", "RUN_COMPLIANCE_ANALYSIS"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateParams(auditIdParamsValidation),
   analyticsController.runComplianceAnalysis
 );
 
-// Generate benchmarking report for building
 router.get(
   "/benchmarking/:buildingId",
+  debugRoute("ANALYTICS", "GENERATE_BENCHMARKING_REPORT"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateParams(buildingIdParamsValidation),
   analyticsController.generateBenchmarkingReport
 );
 
-// Perform gap analysis for audit
 router.post(
   "/gap-analysis/:auditId",
+  debugRoute("ANALYTICS", "PERFORM_GAP_ANALYSIS"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateParams(auditIdParamsValidation),
   validateBody(gapAnalysisValidation),

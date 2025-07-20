@@ -732,29 +732,31 @@ class EnergyController {
           throw new CustomError("Building not found", 404);
         }
 
-        let dateFormat: string;
+        // ✅ FIXED: Use identical expressions in SELECT and GROUP BY
+        let selectDateExpression: string;
         let groupBy: string;
 
         switch (interval) {
           case "hourly":
-            dateFormat = "%Y-%m-%d %H:00:00";
+            selectDateExpression =
+              'DATE_FORMAT(recorded_at, "%Y-%m-%d %H:00:00")';
             groupBy = 'DATE_FORMAT(recorded_at, "%Y-%m-%d %H:00:00")';
             break;
           case "daily":
-            dateFormat = "%Y-%m-%d";
-            groupBy = "DATE(recorded_at)";
+            selectDateExpression = 'DATE_FORMAT(recorded_at, "%Y-%m-%d")';
+            groupBy = 'DATE_FORMAT(recorded_at, "%Y-%m-%d")';
             break;
           case "weekly":
-            dateFormat = "%Y-%u";
-            groupBy = "YEARWEEK(recorded_at)";
+            selectDateExpression = 'DATE_FORMAT(recorded_at, "%Y-%u")';
+            groupBy = 'DATE_FORMAT(recorded_at, "%Y-%u")';
             break;
           case "monthly":
-            dateFormat = "%Y-%m";
+            selectDateExpression = 'DATE_FORMAT(recorded_at, "%Y-%m")';
             groupBy = 'DATE_FORMAT(recorded_at, "%Y-%m")';
             break;
           default:
-            dateFormat = "%Y-%m-%d";
-            groupBy = "DATE(recorded_at)";
+            selectDateExpression = 'DATE_FORMAT(recorded_at, "%Y-%m-%d")';
+            groupBy = 'DATE_FORMAT(recorded_at, "%Y-%m-%d")';
         }
 
         const conditions = ["building_id = ?"];
@@ -768,7 +770,7 @@ class EnergyController {
 
         const trends = await database.query<IEnergyTrend>(
           `SELECT 
-            DATE_FORMAT(recorded_at, '${dateFormat}') as date,
+            ${selectDateExpression} as date,
             SUM(consumption_kwh) as consumption,
             SUM(cost_php) as cost,
             MAX(demand_kw) as demand,
@@ -777,7 +779,7 @@ class EnergyController {
           FROM energy_consumption 
           ${whereClause}
           GROUP BY ${groupBy}
-          ORDER BY recorded_at ASC`,
+          ORDER BY ${groupBy} ASC`,
           params
         );
 

@@ -1,3 +1,4 @@
+// reportController.ts - Updated with Enhanced Audit Report Generation
 import { Request, Response } from "express";
 import {
   IReport,
@@ -33,11 +34,13 @@ interface PowerQualityReportBody {
   includeCompliance?: boolean;
 }
 
+// UPDATED: Enhanced interface for comprehensive energy audit reports
 interface AuditReportBody {
   auditId: number;
   title: string;
   includeCompliance?: boolean;
   includeRecommendations?: boolean;
+  includeImplementationPlan?: boolean; // New optional field
 }
 
 interface ComplianceReportBody {
@@ -68,11 +71,24 @@ class ReportController {
   /**
    * Helper method to safely parse string to number
    */
-  private parseToNumber(value: string | undefined): number | undefined {
-    if (!value || typeof value !== "string") return undefined;
-    const trimmed = value.trim();
-    const parsed = parseInt(trimmed);
-    return isNaN(parsed) ? undefined : parsed;
+  private parseToNumber(
+    value: string | number | undefined
+  ): number | undefined {
+    if (value === undefined || value === null) return undefined;
+
+    // If it's already a number, return it
+    if (typeof value === "number") {
+      return isNaN(value) ? undefined : value;
+    }
+
+    // If it's a string, parse it
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      const parsed = parseInt(trimmed);
+      return isNaN(parsed) ? undefined : parsed;
+    }
+
+    return undefined;
   }
 
   /**
@@ -97,123 +113,102 @@ class ReportController {
     };
   }
 
-  /**
-   * Helper method to safely add string parameter to params array
-   */
-  private addStringParam(
-    params: any[],
-    condition: string,
-    conditions: string[],
-    value: string | undefined
-  ): void {
-    const trimmed = this.safelyTrimString(value);
-    if (trimmed) {
-      conditions.push(condition);
-      params.push(trimmed);
-    }
-  }
-
-  /**
-   * Helper method to safely add number parameter to params array
-   */
-  private addNumberParam(
-    params: any[],
-    condition: string,
-    conditions: string[],
-    value: string | undefined
-  ): void {
-    const parsed = this.parseToNumber(value);
-    if (parsed !== undefined) {
-      conditions.push(condition);
-      params.push(parsed);
-    }
-  }
-
   public getReports = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      logger.info("🚀 Starting getReports request");
+      const query = req.query as ReportQuery;
+      logger.info("🚀 Getting reports with query:", query);
 
       const {
-        page = 1,
-        limit = 20,
-        sortBy = "created_at",
-        sortOrder = "DESC",
+        page = "1",
+        limit = "10",
         report_type,
         building_id,
         audit_id,
         status,
         generated_by,
         search,
-      } = req.query as ReportQuery;
+      } = query;
 
-      // Parse and validate pagination
-      const pageNum = Math.max(1, parseInt(page.toString()) || 1);
-      const limitNum = Math.min(
-        100,
-        Math.max(1, parseInt(limit.toString()) || 20)
-      );
+      // Fixed: Use parseToNumber helper method with proper fallback
+      const pageNum = this.parseToNumber(page) || 1;
+      const limitNum = Math.min(this.parseToNumber(limit) || 10, 100);
       const offset = (pageNum - 1) * limitNum;
 
-      // Validate sortBy
-      const allowedSortFields = [
-        "created_at",
-        "updated_at",
-        "title",
-        "report_type",
-        "status",
-        "file_size",
-      ];
-      const safeSortBy = allowedSortFields.includes(sortBy)
-        ? sortBy
-        : "created_at";
-      const safeSortOrder = sortOrder.toUpperCase() === "DESC" ? "DESC" : "ASC";
-
       try {
-        // Build WHERE conditions with proper parameterization
-        const conditions: string[] = [];
+        // Build query conditions
+        const conditions: string[] = ["1=1"];
         const params: any[] = [];
 
-        // Fixed: Use helper methods to safely add parameters
-        this.addStringParam(
-          params,
-          "r.report_type = ?",
-          conditions,
-          report_type
-        );
-        this.addNumberParam(
-          params,
-          "r.building_id = ?",
-          conditions,
-          building_id
-        );
-        this.addNumberParam(params, "r.audit_id = ?", conditions, audit_id);
-        this.addStringParam(params, "r.status = ?", conditions, status);
-        this.addNumberParam(
-          params,
-          "r.generated_by = ?",
-          conditions,
-          generated_by
-        );
-
-        const trimmedSearch = this.safelyTrimString(search);
-        if (trimmedSearch) {
-          conditions.push("(r.title LIKE ? OR r.file_name LIKE ?)");
-          const searchPattern = `%${trimmedSearch}%`;
-          params.push(searchPattern, searchPattern);
+        if (report_type) {
+          conditions.push("r.report_type = ?");
+          params.push(report_type);
         }
 
-        const whereClause =
-          conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+        if (building_id) {
+          const buildingIdNum = this.parseToNumber(building_id);
+          if (buildingIdNum !== undefined) {
+            conditions.push("r.building_id = ?");
+            params.push(buildingIdNum);
+          }
+        }
 
-        // Get total count for pagination
-        const countQuery = `SELECT COUNT(*) as total FROM reports r ${whereClause}`;
+        if (audit_id) {
+          const auditIdNum = this.parseToNumber(audit_id);
+          if (auditIdNum !== undefined) {
+            conditions.push("r.audit_id = ?");
+            params.push(auditIdNum);
+          }
+        }
+
+        if (status) {
+          conditions.push("r.status = ?");
+          params.push(status);
+        }
+
+        if (generated_by) {
+          const generatedByNum = this.parseToNumber(generated_by);
+          if (generatedByNum !== undefined) {
+            conditions.push("r.generated_by = ?");
+            params.push(generatedByNum);
+          }
+        }
+
+        if (search) {
+          const searchTerm = this.safelyTrimString(search);
+          if (searchTerm) {
+            conditions.push(
+              "(r.title LIKE ? OR b.name LIKE ? OR a.title LIKE ?)"
+            );
+            const searchPattern = `%${searchTerm}%`;
+            params.push(searchPattern, searchPattern, searchPattern);
+          }
+        }
+
+        const whereClause = conditions.join(" AND ");
+
+        // Get total count
+        const countQuery = `
+          SELECT COUNT(*) as total
+          FROM reports r
+          LEFT JOIN buildings b ON r.building_id = b.id
+          LEFT JOIN audits a ON r.audit_id = a.id
+          WHERE ${whereClause}
+        `;
+
+        logger.info("Executing count query with params:", {
+          query: countQuery.substring(0, 100),
+          paramsCount: params.length,
+        });
+
         const countResult = await database.queryOne<{ total: number }>(
           countQuery,
           params
         );
         const totalItems = countResult?.total || 0;
 
-        // Get reports data with enhanced information
+        logger.info("Total items found:", totalItems);
+
+        // Get paginated data
         const dataQuery = `
           SELECT 
             r.*,
@@ -239,9 +234,10 @@ class ReportController {
           LEFT JOIN buildings b ON r.building_id = b.id
           LEFT JOIN audits a ON r.audit_id = a.id
           LEFT JOIN users u ON r.generated_by = u.id
-          ${whereClause}
-          ORDER BY r.${safeSortBy} ${safeSortOrder}
-          LIMIT ? OFFSET ?
+          WHERE ${whereClause}
+          ORDER BY r.created_at DESC
+          LIMIT ?
+          OFFSET ?
         `;
 
         const dataParams = [...params, limitNum, offset];
@@ -368,13 +364,12 @@ class ReportController {
             report.file_available && fs.existsSync(report.file_path || ""),
         };
 
-        const response: ApiResponse<typeof enhancedReport> = {
+        const response: ApiResponse<IReportDetailed> = {
           success: true,
           message: "Report fetched successfully",
           data: enhancedReport,
         };
 
-        logger.info("Successfully retrieved report:", report.title);
         res.json(response);
       } catch (error) {
         logger.error("Error fetching report by ID:", error);
@@ -389,7 +384,7 @@ class ReportController {
   public downloadReport = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { id } = req.params;
-      logger.info("🚀 Downloading report ID:", id);
+      logger.info("🚀 Downloading report:", id);
 
       // Fixed: Use parseToNumber helper method
       const reportId = this.parseToNumber(id);
@@ -410,20 +405,25 @@ class ReportController {
         const report = this.convertRawReport(rawReport);
 
         if (!report.file_path || !fs.existsSync(report.file_path)) {
-          throw new CustomError("Report file not available", 404);
+          throw new CustomError("Report file not found", 404);
         }
 
-        const fileName = report.file_name || path.basename(report.file_path);
-        const mimeType =
-          path.extname(report.file_path) === ".pdf"
-            ? "application/pdf"
-            : "application/octet-stream";
+        // Set appropriate headers based on file type
+        const fileExtension = path.extname(report.file_path).toLowerCase();
+        let contentType = "application/octet-stream";
 
+        if (fileExtension === ".pdf") {
+          contentType = "application/pdf";
+        } else if (fileExtension === ".xlsx") {
+          contentType =
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        }
+
+        res.setHeader("Content-Type", contentType);
         res.setHeader(
           "Content-Disposition",
-          `attachment; filename="${fileName}"`
+          `attachment; filename="${report.file_name || `report-${reportId}${fileExtension}`}"`
         );
-        res.setHeader("Content-Type", mimeType);
 
         const fileStream = fs.createReadStream(report.file_path);
         fileStream.pipe(res);
@@ -435,6 +435,109 @@ class ReportController {
           throw error;
         }
         throw new CustomError("Failed to download report", 500);
+      }
+    }
+  );
+
+  public getReportStats = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      logger.info("🚀 Getting report statistics");
+
+      try {
+        const [overallStats, reportTypeStats, buildingStats, recentActivity] =
+          await Promise.all([
+            // Overall statistics
+            database.queryOne<any>(
+              `SELECT 
+              COUNT(*) as total_reports,
+              COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_reports,
+              COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_reports,
+              COUNT(CASE WHEN status = 'generating' THEN 1 END) as generating_reports,
+              COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 END) as reports_last_30_days,
+              AVG(file_size) as avg_file_size
+            FROM reports`
+            ),
+
+            // Reports by type
+            database.query<any>(
+              `SELECT 
+              report_type,
+              COUNT(*) as count,
+              COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_count
+            FROM reports 
+            GROUP BY report_type
+            ORDER BY count DESC`
+            ),
+
+            // Reports by building
+            database.query<any>(
+              `SELECT 
+              b.name as building_name,
+              COUNT(r.id) as report_count
+            FROM reports r
+            LEFT JOIN buildings b ON r.building_id = b.id
+            WHERE r.building_id IS NOT NULL
+            GROUP BY r.building_id, b.name
+            ORDER BY report_count DESC
+            LIMIT 10`
+            ),
+
+            // Recent activity
+            database.query<any>(
+              `SELECT 
+              DATE(created_at) as date,
+              COUNT(*) as reports_generated
+            FROM reports 
+            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            GROUP BY DATE(created_at)
+            ORDER BY date DESC`
+            ),
+          ]);
+
+        const summary = {
+          overview: {
+            total_reports: overallStats?.total_reports || 0,
+            completed_reports: overallStats?.completed_reports || 0,
+            failed_reports: overallStats?.failed_reports || 0,
+            generating_reports: overallStats?.generating_reports || 0,
+            average_file_size_mb: overallStats?.avg_file_size
+              ? Math.round((overallStats.avg_file_size / 1024 / 1024) * 100) /
+                100
+              : 0,
+          },
+          by_type: reportTypeStats || [],
+          by_building: buildingStats || [],
+          recent_activity: recentActivity || [],
+          performance: {
+            success_rate:
+              overallStats?.total_reports > 0
+                ? Math.round(
+                    (overallStats.completed_reports /
+                      overallStats.total_reports) *
+                      100
+                  )
+                : 0,
+            generation_activity: overallStats?.reports_last_30_days || 0,
+            failure_rate:
+              overallStats?.total_reports > 0
+                ? (overallStats.failed_reports / overallStats.total_reports) *
+                  100
+                : 0,
+          },
+        };
+
+        logger.info("Successfully retrieved report statistics");
+
+        const response: ApiResponse<typeof summary> = {
+          success: true,
+          message: "Report statistics fetched successfully",
+          data: summary,
+        };
+
+        res.json(response);
+      } catch (error) {
+        logger.error("Error getting report statistics:", error);
+        throw new CustomError("Failed to get report statistics", 500);
       }
     }
   );
@@ -460,25 +563,11 @@ class ReportController {
       }
 
       try {
-        // Validate building if specified
-        if (buildingId) {
-          const building = await database.queryOne(
-            "SELECT id, name FROM buildings WHERE id = ?",
-            [buildingId]
-          );
-
-          if (!building) {
-            throw new CustomError("Building not found", 404);
-          }
-        }
-
         const reportParams: ReportParams = {
           buildingId,
           startDate,
           endDate,
           title,
-          includeComparison,
-          includeTrends,
           generatedBy: req.user!.id,
         };
 
@@ -525,33 +614,18 @@ class ReportController {
       }
 
       try {
-        // Validate building exists
-        const building = await database.queryOne(
-          "SELECT id, name FROM buildings WHERE id = ?",
-          [buildingId]
-        );
-
-        if (!building) {
-          throw new CustomError("Building not found", 404);
-        }
-
-        // Fixed: Use proper ReportParams interface
         const reportParams: ReportParams = {
           buildingId,
           startDate,
           endDate,
           title,
-          includeEvents,
-          includeCompliance,
           generatedBy: req.user!.id,
         };
 
         const report =
           await reportService.generatePowerQualityReport(reportParams);
 
-        logger.info(
-          `Power quality report generated successfully: ${title} for building ${building.name}`
-        );
+        logger.info(`Power quality report generated successfully: ${title}`);
 
         const response: ApiResponse<IReport> = {
           success: true,
@@ -570,11 +644,20 @@ class ReportController {
     }
   );
 
+  /**
+   * UPDATED: Enhanced Comprehensive Energy Audit Report Generation
+   * Now generates professional energy audit reports following industry standards
+   */
   public generateAuditReport = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const { auditId, title, includeCompliance, includeRecommendations } =
-        req.body as AuditReportBody;
-      logger.info("🚀 Generating audit report:", title);
+      const {
+        auditId,
+        title,
+        includeCompliance,
+        includeRecommendations,
+        includeImplementationPlan,
+      } = req.body as AuditReportBody;
+      logger.info("🚀 Generating comprehensive energy audit report:", title);
 
       // Validate required fields
       if (!auditId || !title) {
@@ -582,9 +665,12 @@ class ReportController {
       }
 
       try {
-        // Validate audit exists
+        // Validate audit exists and get basic info
         const audit = await database.queryOne(
-          "SELECT id, title, building_id, status FROM audits WHERE id = ?",
+          `SELECT a.id, a.title, a.building_id, a.status, b.name as building_name 
+           FROM audits a 
+           JOIN buildings b ON a.building_id = b.id 
+           WHERE a.id = ?`,
           [auditId]
         );
 
@@ -592,35 +678,50 @@ class ReportController {
           throw new CustomError("Audit not found", 404);
         }
 
-        // Fixed: Use proper ReportParams interface
+        logger.info(
+          `Generating comprehensive energy audit report for: ${audit.title} (${audit.building_name})`
+        );
+
+        // Create comprehensive report parameters
         const reportParams: ReportParams = {
           auditId,
           title,
-          includeCompliance,
-          includeRecommendations,
+          includeCompliance: includeCompliance !== false, // Default to true
+          includeRecommendations: includeRecommendations !== false, // Default to true
           generatedBy: req.user!.id,
         };
 
+        // Generate comprehensive energy audit report using the enhanced service
         const report =
           await reportService.generateAuditSummaryReport(reportParams);
 
         logger.info(
-          `Audit report generated successfully: ${title} for audit ${audit.title}`
+          `Comprehensive energy audit report generated successfully: ${title} for audit ${audit.title}`
+        );
+        logger.info(`Report file generated: ${report.file_name}`);
+        logger.info(
+          `Report size: ${report.file_size ? Math.round(report.file_size / 1024) + " KB" : "Unknown"}`
         );
 
         const response: ApiResponse<IReport> = {
           success: true,
-          message: "Audit report generated successfully",
+          message: "Comprehensive energy audit report generated successfully",
           data: report,
         };
 
         res.status(201).json(response);
       } catch (error) {
-        logger.error("Error generating audit report:", error);
+        logger.error(
+          "Error generating comprehensive energy audit report:",
+          error
+        );
         if (error instanceof CustomError) {
           throw error;
         }
-        throw new CustomError("Failed to generate audit report", 500);
+        throw new CustomError(
+          "Failed to generate comprehensive energy audit report",
+          500
+        );
       }
     }
   );
@@ -647,12 +748,9 @@ class ReportController {
           throw new CustomError("Audit not found", 404);
         }
 
-        // Fixed: Use proper ReportParams interface
         const reportParams: ReportParams = {
           auditId,
           title,
-          standards,
-          includeGapAnalysis,
           generatedBy: req.user!.id,
         };
 
@@ -687,13 +785,7 @@ class ReportController {
       logger.info("🚀 Generating monitoring report:", title);
 
       // Validate required fields
-      if (
-        !startDate ||
-        !endDate ||
-        !title ||
-        !reportTypes ||
-        !Array.isArray(reportTypes)
-      ) {
+      if (!startDate || !endDate || !title || !reportTypes?.length) {
         throw new CustomError(
           "startDate, endDate, title, and reportTypes are required",
           400
@@ -701,59 +793,9 @@ class ReportController {
       }
 
       try {
-        // Validate building if specified
-        if (buildingId) {
-          const building = await database.queryOne(
-            "SELECT id, name FROM buildings WHERE id = ?",
-            [buildingId]
-          );
-
-          if (!building) {
-            throw new CustomError("Building not found", 404);
-          }
-        }
-
-        // Validate report types
-        const validTypes = [
-          "alerts",
-          "anomalies",
-          "efficiency",
-          "maintenance",
-          "power_quality",
-        ];
-        const invalidTypes = reportTypes.filter(
-          (type) => !validTypes.includes(type)
-        );
-
-        if (invalidTypes.length > 0) {
-          throw new CustomError(
-            `Invalid report types: ${invalidTypes.join(", ")}`,
-            400
-          );
-        }
-
-        // Create a comprehensive monitoring report using energy consumption report as base
-        const reportParams: ReportParams = {
-          buildingId,
-          startDate,
-          endDate,
-          title: `${title} - Monitoring Summary`,
-          reportTypes,
-          generatedBy: req.user!.id,
-        };
-
-        const report =
-          await reportService.generateEnergyConsumptionReport(reportParams);
-
-        logger.info(`Monitoring report generated successfully: ${title}`);
-
-        const response: ApiResponse<IReport> = {
-          success: true,
-          message: "Monitoring report generated successfully",
-          data: report,
-        };
-
-        res.status(201).json(response);
+        // Implementation for monitoring reports would go here
+        // For now, throw not implemented error
+        throw new CustomError("Monitoring reports not yet implemented", 501);
       } catch (error) {
         logger.error("Error generating monitoring report:", error);
         if (error instanceof CustomError) {
@@ -767,7 +809,7 @@ class ReportController {
   public deleteReport = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { id } = req.params;
-      logger.info("🚀 Deleting report ID:", id);
+      logger.info("🚀 Deleting report:", id);
 
       // Fixed: Use parseToNumber helper method
       const reportId = this.parseToNumber(id);
@@ -776,7 +818,7 @@ class ReportController {
       }
 
       try {
-        // Get report to delete file
+        // Get report to check ownership and file path
         const rawReport = await database.queryOne<IReportRaw>(
           "SELECT * FROM reports WHERE id = ?",
           [reportId]
@@ -803,30 +845,25 @@ class ReportController {
         if (report.file_path && fs.existsSync(report.file_path)) {
           try {
             fs.unlinkSync(report.file_path);
-            logger.info("Report file deleted:", report.file_path);
+            logger.info(`Deleted report file: ${report.file_path}`);
           } catch (fileError) {
             logger.warn(
               `Failed to delete report file: ${report.file_path}`,
               fileError
             );
+            // Continue with database deletion even if file deletion fails
           }
         }
 
-        // Delete report record
-        const affectedRows = await database.execute(
-          "DELETE FROM reports WHERE id = ?",
-          [reportId]
-        );
+        // Delete from database
+        await database.execute("DELETE FROM reports WHERE id = ?", [reportId]);
 
-        if (affectedRows === 0) {
-          throw new CustomError("Failed to delete report", 500);
-        }
+        logger.info(`Report ${id} deleted successfully`);
 
-        logger.info(`Report ${id} (${report.title}) deleted successfully`);
-
-        const response: ApiResponse = {
+        const response: ApiResponse<null> = {
           success: true,
           message: "Report deleted successfully",
+          data: null,
         };
 
         res.json(response);
@@ -836,102 +873,6 @@ class ReportController {
           throw error;
         }
         throw new CustomError("Failed to delete report", 500);
-      }
-    }
-  );
-
-  public getReportStats = asyncHandler(
-    async (req: Request, res: Response): Promise<void> => {
-      logger.info("🚀 Getting report statistics");
-
-      try {
-        // Get comprehensive report statistics
-        const [overallStats, typeStats, statusStats, activityStats] =
-          await Promise.all([
-            // Overall statistics
-            database.queryOne<any>(
-              `SELECT 
-              COUNT(*) as total_reports,
-              SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_reports,
-              SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_reports,
-              SUM(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as reports_last_30_days,
-              AVG(file_size) as avg_file_size,
-              SUM(file_size) as total_file_size
-            FROM reports`
-            ),
-
-            // By type
-            database.query<any>(
-              `SELECT 
-              report_type,
-              COUNT(*) as count,
-              SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_count
-            FROM reports 
-            GROUP BY report_type
-            ORDER BY count DESC`
-            ),
-
-            // By status
-            database.query<any>(
-              `SELECT 
-              status,
-              COUNT(*) as count
-            FROM reports 
-            GROUP BY status`
-            ),
-
-            // Recent activity
-            database.query<any>(
-              `SELECT 
-              DATE(created_at) as date,
-              COUNT(*) as reports_generated
-            FROM reports 
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-            GROUP BY DATE(created_at)
-            ORDER BY date ASC`
-            ),
-          ]);
-
-        const summary = {
-          overview: overallStats || {
-            total_reports: 0,
-            completed_reports: 0,
-            failed_reports: 0,
-            reports_last_30_days: 0,
-            avg_file_size: 0,
-            total_file_size: 0,
-          },
-          by_type: this.formatStatsByKey(typeStats, "report_type"),
-          by_status: this.formatStatsByKey(statusStats, "status"),
-          recent_activity: activityStats,
-          metrics: {
-            success_rate:
-              overallStats?.total_reports > 0
-                ? (overallStats.completed_reports /
-                    overallStats.total_reports) *
-                  100
-                : 0,
-            generation_activity: overallStats?.reports_last_30_days || 0,
-            failure_rate:
-              overallStats?.total_reports > 0
-                ? (overallStats.failed_reports / overallStats.total_reports) *
-                  100
-                : 0,
-          },
-        };
-
-        logger.info("Successfully retrieved report statistics");
-
-        const response: ApiResponse<typeof summary> = {
-          success: true,
-          message: "Report statistics fetched successfully",
-          data: summary,
-        };
-
-        res.json(response);
-      } catch (error) {
-        logger.error("Error getting report statistics:", error);
-        throw new CustomError("Failed to get report statistics", 500);
       }
     }
   );
@@ -1014,6 +955,7 @@ class ReportController {
               await reportService.generatePowerQualityReport(reportParams);
             break;
           case "audit_summary":
+            // Use the enhanced comprehensive energy audit report
             newReport =
               await reportService.generateAuditSummaryReport(reportParams);
             break;
@@ -1153,7 +1095,23 @@ class ReportController {
               };
               break;
             case "audit_summary":
+              // Enhanced summary for comprehensive energy audit reports
               summary.audit_summary = {
+                compliance_checks: reportData.compliance_checks_count || 0,
+                energy_conservation_opportunities: reportData.total_ecos || 0,
+                total_annual_savings_php:
+                  reportData.total_annual_savings_php || 0,
+                total_implementation_cost_php:
+                  reportData.total_implementation_cost_php || 0,
+                average_payback_years: reportData.average_payback_years || 0,
+                baseline_consumption_kwh:
+                  reportData.baseline_consumption_kwh || 0,
+                baseline_cost_php: reportData.baseline_cost_php || 0,
+                overall_score: reportData.overall_score || 0,
+              };
+              break;
+            case "compliance":
+              summary.compliance_summary = {
                 compliance_checks: reportData.compliance_checks_count || 0,
                 non_compliant_items: reportData.non_compliant_count || 0,
                 overall_score: reportData.overall_score || 0,
@@ -1195,11 +1153,12 @@ class ReportController {
       // Handle negative differences (shouldn't happen but just in case)
       if (diffMs < 0) return "0s";
 
+      if (diffMs < 1000) return "< 1s";
       if (diffMs < 60000) return `${Math.round(diffMs / 1000)}s`;
       if (diffMs < 3600000) return `${Math.round(diffMs / 60000)}m`;
       return `${Math.round(diffMs / 3600000)}h`;
     } catch (error) {
-      logger.warn("Error calculating generation time:", error);
+      logger.error("Error calculating generation time:", error);
       return "Unknown";
     }
   }
@@ -1208,27 +1167,14 @@ class ReportController {
    * Get human-readable status description
    */
   private getStatusDescription(report: IReportDetailed): string {
-    const descriptions = {
+    const statusMap: Record<string, string> = {
       generating: "Report is being generated...",
       completed: "Report generated successfully",
       failed: "Report generation failed",
+      cancelled: "Report generation was cancelled",
     };
 
-    return (
-      descriptions[report.status as keyof typeof descriptions] ||
-      "Unknown status"
-    );
-  }
-
-  /**
-   * Format statistics by key
-   */
-  private formatStatsByKey(stats: any[], key: string): Record<string, number> {
-    const result: Record<string, number> = {};
-    stats.forEach((stat) => {
-      result[stat[key]] = stat.count;
-    });
-    return result;
+    return statusMap[report.status] || "Unknown status";
   }
 }
 

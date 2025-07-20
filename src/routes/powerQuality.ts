@@ -16,47 +16,47 @@ import {
   powerQualityTrendsQueryValidation,
 } from "@/validations/powerQualityValidation";
 import { dateRangeValidation } from "@/validations/commonValidations";
+import { debugRoute } from "@/utils/debugLogger";
 
 const router = Router();
 
 router.use(authenticateToken);
 
-// Routes
-
-// Get power quality data with pagination and filtering
+// Routes with debug logging
 router.get(
   "/",
+  debugRoute("POWER_QUALITY", "GET_POWER_QUALITY_DATA"),
   validateQuery(powerQualityQueryValidation),
   powerQualityController.getPowerQualityData
 );
 
-// Get power quality statistics for a building
 router.get(
   "/stats/:buildingId",
+  debugRoute("POWER_QUALITY", "GET_POWER_QUALITY_STATS"),
   validateParams(powerQualityParamsValidation),
   validateQuery(dateRangeValidation),
   powerQualityController.getPowerQualityStats
 );
 
-// Get power quality events for a building
 router.get(
   "/events/:buildingId",
+  debugRoute("POWER_QUALITY", "GET_POWER_QUALITY_EVENTS"),
   validateParams(powerQualityParamsValidation),
   validateQuery(powerQualityEventsQueryValidation),
   powerQualityController.getPowerQualityEvents
 );
 
-// Analyze power quality trends for a building
 router.get(
   "/trends/:buildingId",
+  debugRoute("POWER_QUALITY", "ANALYZE_POWER_QUALITY_TRENDS"),
   validateParams(powerQualityParamsValidation),
   validateQuery(powerQualityTrendsQueryValidation),
   powerQualityController.analyzePowerQualityTrends
 );
 
-// Create new power quality reading
 router.post(
   "/",
+  debugRoute("POWER_QUALITY", "CREATE_POWER_QUALITY_READING"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,

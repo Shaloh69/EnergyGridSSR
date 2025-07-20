@@ -5,31 +5,40 @@ import { authenticateToken, authorizeRoles } from "@/middleware/auth";
 import { validateQuery } from "@/middleware/validation";
 import { UserRole } from "@/types/enums";
 import { alertsQueryValidation } from "@/validations/dashboardValidation";
+import { debugRoute } from "@/utils/debugLogger";
 
 const router = Router();
 
 router.use(authenticateToken);
 
-// Routes
+// Routes with debug logging
+router.get(
+  "/overview",
+  debugRoute("DASHBOARD", "GET_DASHBOARD_OVERVIEW"),
+  dashboardController.getDashboardOverview
+);
 
-// Get dashboard overview data
-router.get("/overview", dashboardController.getDashboardOverview);
+router.get(
+  "/real-time",
+  debugRoute("DASHBOARD", "GET_REAL_TIME_METRICS"),
+  dashboardController.getRealTimeMetrics
+);
 
-// Get real-time metrics
-router.get("/real-time", dashboardController.getRealTimeMetrics);
+router.get(
+  "/energy-summary",
+  debugRoute("DASHBOARD", "GET_ENERGY_SUMMARY"),
+  dashboardController.getEnergySummary
+);
 
-// Get energy summary
-router.get("/energy-summary", dashboardController.getEnergySummary);
-
-// Get power quality summary
 router.get(
   "/power-quality-summary",
+  debugRoute("DASHBOARD", "GET_POWER_QUALITY_SUMMARY"),
   dashboardController.getPowerQualitySummary
 );
 
-// Get audit summary
 router.get(
   "/audit-summary",
+  debugRoute("DASHBOARD", "GET_AUDIT_SUMMARY"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -38,9 +47,9 @@ router.get(
   dashboardController.getAuditSummary
 );
 
-// Get compliance summary
 router.get(
   "/compliance-summary",
+  debugRoute("DASHBOARD", "GET_COMPLIANCE_SUMMARY"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -49,9 +58,9 @@ router.get(
   dashboardController.getComplianceSummary
 );
 
-// Get active alerts for dashboard
 router.get(
   "/alerts",
+  debugRoute("DASHBOARD", "GET_DASHBOARD_ALERTS"),
   validateQuery(alertsQueryValidation),
   dashboardController.getAlerts
 );

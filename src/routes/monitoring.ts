@@ -27,66 +27,65 @@ import {
   buildingIdParamsValidation,
   idParamsValidation,
 } from "@/validations/commonValidations";
+import { debugRoute } from "@/utils/debugLogger";
 
 const router = Router();
 
 router.use(authenticateToken);
 
-// Additional validation schema that needs to be moved to monitoringValidation.ts
 const jobIdParamsValidation = idParamsValidation;
 
-// Routes
+// Routes with debug logging
 
-/**
- * Get monitoring dashboard overview
- */
-router.get("/dashboard", async (req: Request, res: Response<ApiResponse>) => {
-  try {
-    const dashboardData = await database.query(`
-      SELECT * FROM monitoring_dashboard_summary
-      ORDER BY critical_alerts DESC, high_alerts DESC
-    `);
+router.get(
+  "/dashboard",
+  debugRoute("MONITORING", "GET_MONITORING_DASHBOARD"),
+  async (req: Request, res: Response<ApiResponse>) => {
+    try {
+      const dashboardData = await database.query(`
+        SELECT * FROM monitoring_dashboard_summary
+        ORDER BY critical_alerts DESC, high_alerts DESC
+      `);
 
-    const systemStats = {
-      totalBuildings: dashboardData.length,
-      totalAlerts: dashboardData.reduce(
-        (sum: number, building: any) => sum + building.active_alerts,
-        0
-      ),
-      criticalAlerts: dashboardData.reduce(
-        (sum: number, building: any) => sum + building.critical_alerts,
-        0
-      ),
-      faultyEquipment: dashboardData.reduce(
-        (sum: number, building: any) => sum + building.faulty_equipment,
-        0
-      ),
-      connectedUsers: socketManager.getConnectedUsers(),
-    };
+      const systemStats = {
+        totalBuildings: dashboardData.length,
+        totalAlerts: dashboardData.reduce(
+          (sum: number, building: any) => sum + building.active_alerts,
+          0
+        ),
+        criticalAlerts: dashboardData.reduce(
+          (sum: number, building: any) => sum + building.critical_alerts,
+          0
+        ),
+        faultyEquipment: dashboardData.reduce(
+          (sum: number, building: any) => sum + building.faulty_equipment,
+          0
+        ),
+        connectedUsers: socketManager.getConnectedUsers(),
+      };
 
-    return res.json({
-      success: true,
-      message: "Monitoring dashboard data retrieved successfully",
-      data: {
-        systemStats,
-        buildings: dashboardData,
-      },
-    });
-  } catch (error) {
-    logger.error("Error fetching monitoring dashboard:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch monitoring dashboard",
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
+      return res.json({
+        success: true,
+        message: "Monitoring dashboard data retrieved successfully",
+        data: {
+          systemStats,
+          buildings: dashboardData,
+        },
+      });
+    } catch (error) {
+      logger.error("Error fetching monitoring dashboard:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch monitoring dashboard",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   }
-});
+);
 
-/**
- * Get recent monitoring activities
- */
 router.get(
   "/activities",
+  debugRoute("MONITORING", "GET_MONITORING_ACTIVITIES"),
   authorizeRoles(
     UserRole.ADMIN,
     UserRole.ENERGY_MANAGER,
@@ -139,11 +138,9 @@ router.get(
   }
 );
 
-/**
- * Get recent monitoring data for specific building
- */
 router.get(
   "/building/:buildingId/recent",
+  debugRoute("MONITORING", "GET_BUILDING_RECENT_DATA"),
   validateParams(buildingIdParamsValidation),
   validateQuery(recentDataQueryValidation),
   async (req: Request, res: Response<ApiResponse>) => {
@@ -185,11 +182,9 @@ router.get(
   }
 );
 
-/**
- * Get all background jobs
- */
 router.get(
   "/jobs",
+  debugRoute("MONITORING", "GET_BACKGROUND_JOBS"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   async (req: Request, res: Response<ApiResponse>) => {
     try {
@@ -231,11 +226,9 @@ router.get(
   }
 );
 
-/**
- * Get specific background job status
- */
 router.get(
   "/jobs/:jobId",
+  debugRoute("MONITORING", "GET_JOB_STATUS"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateParams(jobIdParamsValidation),
   async (req: Request, res: Response<ApiResponse>) => {
@@ -267,11 +260,9 @@ router.get(
   }
 );
 
-/**
- * Create new background job
- */
 router.post(
   "/jobs",
+  debugRoute("MONITORING", "CREATE_BACKGROUND_JOB"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   validateBody(createJobValidation),
   async (req: Request, res: Response<ApiResponse>) => {
@@ -301,11 +292,9 @@ router.post(
   }
 );
 
-/**
- * Get system status (admin only)
- */
 router.get(
   "/system-status",
+  debugRoute("MONITORING", "GET_SYSTEM_STATUS"),
   authorizeRoles(UserRole.ADMIN),
   async (req: Request, res: Response<ApiResponse>) => {
     try {
@@ -359,11 +348,9 @@ router.get(
   }
 );
 
-/**
- * Clear monitoring cache (admin only)
- */
 router.post(
   "/cache/clear",
+  debugRoute("MONITORING", "CLEAR_MONITORING_CACHE"),
   authorizeRoles(UserRole.ADMIN),
   async (req: Request, res: Response<ApiResponse>) => {
     try {
@@ -403,11 +390,9 @@ router.post(
   }
 );
 
-/**
- * Get monitoring configurations
- */
 router.get(
   "/configurations",
+  debugRoute("MONITORING", "GET_MONITORING_CONFIGURATIONS"),
   authorizeRoles(UserRole.ADMIN, UserRole.ENERGY_MANAGER),
   async (req: Request, res: Response<ApiResponse>) => {
     try {
